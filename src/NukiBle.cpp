@@ -80,7 +80,7 @@ PairingResult NukiBle::pairNuki(AuthorizationIdType idType) {
   }
   PairingResult result = PairingResult::Pairing;
 
-  if (pairingServiceAvailable && bleAddress != BLEAddress("")) {
+  if (millis() < pairingServiceAvailableTs && bleAddress != BLEAddress("")) {
     #ifdef DEBUG_NUKI_CONNECT
     log_d("Nuki in pairing mode found");
     #endif
@@ -254,9 +254,7 @@ void NukiBle::onResult(BLEAdvertisedDevice* advertisedDevice) {
       log_d("Found nuki in pairing state: %s addr: %s", std::string(advertisedDevice->getName()).c_str(), std::string(advertisedDevice->getAddress()).c_str());
       #endif
       bleAddress = advertisedDevice->getAddress();
-      pairingServiceAvailable = true;
-    } else {
-      pairingServiceAvailable = false;
+      pairingServiceAvailableTs = millis() + 60 * 1000;
     }
   }
 }
