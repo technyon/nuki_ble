@@ -58,7 +58,7 @@ void NukiBle::initialize() {
 
   pClient = BLEDevice::createClient();
   pClient->setClientCallbacks(this);
-  pClient->setConnectTimeout(connectTimeoutSec);
+  pClient->setConnectTimeout(connectTimeoutSec * 1000);
 
   isPaired = retrieveCredentials();
 }
@@ -133,7 +133,7 @@ bool NukiBle::connectBle(const BLEAddress bleAddress) {
     #endif
 
     uint8_t connectRetry = 0;
-    pClient->setConnectTimeout(connectTimeoutSec);
+    pClient->setConnectTimeout(connectTimeoutSec * 1000);
     while (connectRetry < connectRetries) {
       #ifdef DEBUG_NUKI_CONNECT
       log_d("connection attemnpt %d", connectRetry);
@@ -1171,7 +1171,7 @@ void NukiBle::onConnect(BLEClient*) {
   #endif
 };
 
-void NukiBle::onDisconnect(BLEClient*) {
+void NukiBle::onDisconnect(BLEClient*, int reason) {
   #ifdef DEBUG_NUKI_CONNECT
   log_d("BLE disconnected");
   #endif
