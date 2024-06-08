@@ -58,7 +58,11 @@ void NukiBle::initialize() {
 
   pClient = BLEDevice::createClient();
   pClient->setClientCallbacks(this);
+  #if (ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0))
+  pClient->setConnectTimeout(connectTimeoutSec);
+  #else
   pClient->setConnectTimeout(connectTimeoutSec * 1000);
+  #endif
 
   isPaired = retrieveCredentials();
 }
@@ -73,14 +77,17 @@ PairingResult NukiBle::pairNuki(AuthorizationIdType idType) {
 
   if (retrieveCredentials()) {
     #ifdef DEBUG_NUKI_CONNECT
-    log_d("Allready paired");
+    log_d("Already paired");
     #endif
     isPaired = true;
     return PairingResult::Success;
   }
   PairingResult result = PairingResult::Pairing;
 
+  if (pairingLastSeen < millis() - 2000) pairingServiceAvailable = false;
+
   if (pairingServiceAvailable && bleAddress != BLEAddress("")) {
+    pairingServiceAvailable = false;
     #ifdef DEBUG_NUKI_CONNECT
     log_d("Nuki in pairing mode found");
     #endif
@@ -90,6 +97,7 @@ PairingResult NukiBle::pairNuki(AuthorizationIdType idType) {
       PairingState nukiPairingState = PairingState::InitPairing;
       do {
         nukiPairingState = pairStateMachine(nukiPairingState);
+        extendDisonnectTimeout();
         delay(50);
       } while ((nukiPairingState != PairingState::Success) && (nukiPairingState != PairingState::Timeout));
 
@@ -100,7 +108,6 @@ PairingResult NukiBle::pairNuki(AuthorizationIdType idType) {
       } else {
         result = PairingResult::Timeout;
       }
-      extendDisonnectTimeout();
     }
   } else {
     #ifdef DEBUG_NUKI_CONNECT
@@ -129,11 +136,19 @@ bool NukiBle::connectBle(const BLEAddress bleAddress) {
   bleScanner->enableScanning(false);
   if (!pClient->isConnected()) {
     #ifdef DEBUG_NUKI_CONNECT
+    #if (ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0))
     log_d("connecting within: %s", pcTaskGetTaskName(xTaskGetCurrentTaskHandle()));
+    #else
+    log_d("connecting within: %s", pcTaskGetName(xTaskGetCurrentTaskHandle()));
+    #endif
     #endif
 
     uint8_t connectRetry = 0;
+    #if (ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0))
+    pClient->setConnectTimeout(connectTimeoutSec);
+    #else
     pClient->setConnectTimeout(connectTimeoutSec * 1000);
+    #endif
     while (connectRetry < connectRetries) {
       #ifdef DEBUG_NUKI_CONNECT
       log_d("connection attemnpt %d", connectRetry);
@@ -151,7 +166,9 @@ bool NukiBle::connectBle(const BLEAddress bleAddress) {
         log_w("BLE Connect failed, %d retries left", connectRetries - connectRetry - 1);
       }
       connectRetry++;
+      #ifndef NUKI_NO_WDT_RESET
       esp_task_wdt_reset();
+      #endif
       delay(10);
     }
   } else {
@@ -255,8 +272,7 @@ void NukiBle::onResult(BLEAdvertisedDevice* advertisedDevice) {
         #endif
         bleAddress = advertisedDevice->getAddress();
         pairingServiceAvailable = true;
-      } else {
-        pairingServiceAvailable = false;
+        pairingLastSeen = millis();
       }
     }
   }
@@ -983,7 +999,7 @@ bool NukiBle::registerOnUsdioChar() {
 }
 
 void NukiBle::notifyCallback(BLERemoteCharacteristic* pBLERemoteCharacteristic, uint8_t* recData, size_t length, bool isNotify) {
-
+  lastHeartbeat = millis();
   #ifdef DEBUG_NUKI_COMMUNICATION
   log_d(" Notify callback for characteristic: %s of length: %d", pBLERemoteCharacteristic->getUUID().toString().c_str(), length);
   #endif
@@ -1175,11 +1191,21 @@ void NukiBle::onConnect(BLEClient*) {
   #endif
 };
 
-void NukiBle::onDisconnect(BLEClient*, int reason) {
+#if (ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0))
+void NukiBle::onDisconnect(BLEClient*)
+{
   #ifdef DEBUG_NUKI_CONNECT
   log_d("BLE disconnected");
   #endif
 };
+#else
+void NukiBle::onDisconnect(BLEClient*, int reason)
+{
+  #ifdef DEBUG_NUKI_CONNECT
+  log_d("BLE disconnected");
+  #endif
+};
+#endif
 
 void NukiBle::setEventHandler(SmartlockEventHandler* handler) {
   eventHandler = handler;
@@ -1190,7 +1216,11 @@ const bool NukiBle::isPairedWithLock() const {
 };
 
 bool NukiBle::takeNukiBleSemaphore(std::string taker) {
+  #ifndef NUKI_MUTEX_RECURSIVE
   bool result = xSemaphoreTake(nukiBleSemaphore, NUKI_SEMAPHORE_TIMEOUT / portTICK_PERIOD_MS) == pdTRUE;
+  #else
+  bool result = xSemaphoreTakeRecursive(nukiBleSemaphore, NUKI_SEMAPHORE_TIMEOUT / portTICK_PERIOD_MS) == pdTRUE;
+  #endif
 
   if (!result) {
     log_d("%s FAILED to take Nuki semaphore. Owner %s", taker.c_str(), owner.c_str());
@@ -1203,7 +1233,11 @@ bool NukiBle::takeNukiBleSemaphore(std::string taker) {
 
 void NukiBle::giveNukiBleSemaphore() {
   owner = "free";
+  #ifndef NUKI_MUTEX_RECURSIVE
   xSemaphoreGive(nukiBleSemaphore);
+  #else
+  xSemaphoreGiveRecursive(nukiBleSemaphore);
+  #endif
 }
 
 int NukiBle::getRssi() const {

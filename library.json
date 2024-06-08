@@ -26,7 +26,7 @@
   "dependencies": [
     {
       "name": "NimBLE-Arduino",
-      "version": "https://github.com/h2zero/NimBLE-Arduino.git#esp32-c6-test"
+      "version": "h2zero/NimBLE-Arduino @ ^1.4.0"
     },
     {
       "name": "CRC16",
@@ -34,7 +34,7 @@
     },
     {
       "name": "BleScanner",
-      "version": "https://github.com/iranl/BleScanner#clear_results"
+      "version": "https://github.com/I-Connect/BleScanner"
     }
   ]
 }

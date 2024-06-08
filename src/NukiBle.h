@@ -19,6 +19,7 @@
 #include <esp_task_wdt.h>
 #include <BleInterfaces.h>
 #include "sodium/crypto_secretbox.h"
+#include <string>
 
 #define GENERAL_TIMEOUT 3000
 #define CMD_TIMEOUT 10000
@@ -303,7 +304,11 @@ class NukiBle : public BLEClientCallbacks, public BleScanner::Subscriber {
     Command lastMsgCodeReceived = Command::Empty;
 
   private:
+    #ifndef NUKI_MUTEX_RECURSIVE
     SemaphoreHandle_t nukiBleSemaphore = xSemaphoreCreateMutex();
+    #else
+    SemaphoreHandle_t nukiBleSemaphore = xSemaphoreCreateRecursiveMutex();
+    #endif
     bool takeNukiBleSemaphore(std::string taker);
     std::string owner = "free";
     void giveNukiBleSemaphore();
@@ -313,9 +318,14 @@ class NukiBle : public BLEClientCallbacks, public BleScanner::Subscriber {
     uint16_t timeoutDuration = 1000;
     uint8_t connectTimeoutSec = 1;
     uint8_t connectRetries = 5;
+    unsigned long pairingLastSeen = 0;
 
     void onConnect(BLEClient*) override;
+    #if (ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0))
+    void onDisconnect(BLEClient*) override;
+    #else
     void onDisconnect(BLEClient*, int reason) override;
+    #endif
     void onResult(BLEAdvertisedDevice* advertisedDevice) override;
     bool registerOnGdioChar();
     bool registerOnUsdioChar();
