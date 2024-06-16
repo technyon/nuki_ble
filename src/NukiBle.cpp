@@ -1197,19 +1197,14 @@ void NukiBle::onConnect(BLEClient*) {
 
 #if (ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0))
 void NukiBle::onDisconnect(BLEClient*)
-{
-  #ifdef DEBUG_NUKI_CONNECT
-  log_d("BLE disconnected");
-  #endif
-};
 #else
 void NukiBle::onDisconnect(BLEClient*, int reason)
+#endif
 {
   #ifdef DEBUG_NUKI_CONNECT
   log_d("BLE disconnected");
   #endif
 };
-#endif
 
 void NukiBle::setEventHandler(SmartlockEventHandler* handler) {
   eventHandler = handler;
