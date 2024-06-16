@@ -18,6 +18,7 @@
 #include <Preferences.h>
 #include <esp_task_wdt.h>
 #include <BleInterfaces.h>
+#include <atomic>
 #include "sodium/crypto_secretbox.h"
 #include <string>
 
@@ -300,7 +301,12 @@ class NukiBle : public BLEClientCallbacks, public BleScanner::Subscriber {
   protected:
     virtual void handleReturnMessage(Command returnCode, unsigned char* data, uint16_t dataLen);
     virtual void logErrorCode(uint8_t errorCode) = 0;
-    uint8_t errorCode;
+
+    // Cannot initialize to any meaningful value since error namespaces are only
+    // defined for NukeBle descendants. Using zero as a safe default, which should
+    // work better than random for a general case.
+    uint8_t errorCode = 0;
+
     Command lastMsgCodeReceived = Command::Empty;
 
   private:
@@ -368,7 +374,7 @@ class NukiBle : public BLEClientCallbacks, public BleScanner::Subscriber {
     Nuki::CommandState nukiCommandState = Nuki::CommandState::Idle;
 
     uint32_t timeNow = 0;
-    uint32_t lastHeartbeat = 0;
+    std::atomic_uint lastHeartbeat;
 
     BleScanner::Publisher* bleScanner = nullptr;
     bool isPaired = false;
@@ -393,8 +399,8 @@ class NukiBle : public BLEClientCallbacks, public BleScanner::Subscriber {
     bool keypadCodeCountReceived = false;
     uint16_t logEntryCount = 0;
     bool loggingEnabled = false;
-    int rssi = 0;
-    unsigned long lastReceivedBeaconTs = 0;
+    std::atomic_int rssi;
+    std::atomic_ulong lastReceivedBeaconTs;
     std::list<KeypadEntry> listOfKeyPadEntries;
     std::list<AuthorizationEntry> listOfAuthorizationEntries;
     AuthorizationIdType authorizationIdType = AuthorizationIdType::Bridge;
