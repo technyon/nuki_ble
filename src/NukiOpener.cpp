@@ -106,7 +106,6 @@ Nuki::CmdResult NukiOpener::requestAdvancedConfig(AdvancedConfig* retrievedAdvan
   return result;
 }
 
-
 //basic config change methods
 Nuki::CmdResult NukiOpener::setName(const std::string& name) {
 

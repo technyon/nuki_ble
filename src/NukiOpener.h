@@ -377,7 +377,6 @@ class NukiOpener : public Nuki::NukiBle {
      */
     Nuki::CmdResult requestAdvancedConfig(AdvancedConfig* retrievedAdvancedConfig);
 
-
     /**
      * @brief Returns battery critical state parsed from the battery state byte (battery critical byte)
      *

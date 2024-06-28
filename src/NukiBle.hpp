@@ -27,6 +27,7 @@ Nuki::CmdResult NukiBle::executeAction(const TDeviceAction action) {
     #ifdef DEBUG_NUKI_COMMUNICATION
     log_d("Start executing: %02x ", action.command);
     #endif
+
     if (action.cmdType == Nuki::CommandType::Command) {
       while (1) {
         Nuki::CmdResult result = cmdStateMachine(action);
@@ -35,7 +36,9 @@ Nuki::CmdResult NukiBle::executeAction(const TDeviceAction action) {
           extendDisonnectTimeout();
           return result;
         }
+        #ifndef NUKI_NO_WDT_RESET
         esp_task_wdt_reset();
+        #endif
         delay(10);
       }
     } else if (action.cmdType == Nuki::CommandType::CommandWithChallenge) {
@@ -46,7 +49,9 @@ Nuki::CmdResult NukiBle::executeAction(const TDeviceAction action) {
           extendDisonnectTimeout();
           return result;
         }
+        #ifndef NUKI_NO_WDT_RESET
         esp_task_wdt_reset();
+        #endif
         delay(10);
       }
     } else if (action.cmdType == Nuki::CommandType::CommandWithChallengeAndAccept) {
@@ -57,7 +62,9 @@ Nuki::CmdResult NukiBle::executeAction(const TDeviceAction action) {
           extendDisonnectTimeout();
           return result;
         }
+        #ifndef NUKI_NO_WDT_RESET
         esp_task_wdt_reset();
+        #endif
         delay(10);
       }
     } else if (action.cmdType == Nuki::CommandType::CommandWithChallengeAndPin) {
@@ -68,7 +75,9 @@ Nuki::CmdResult NukiBle::executeAction(const TDeviceAction action) {
           extendDisonnectTimeout();
           return result;
         }
+        #ifndef NUKI_NO_WDT_RESET
         esp_task_wdt_reset();
+        #endif
         delay(10);
       }
     } else {
@@ -112,6 +121,7 @@ Nuki::CmdResult NukiBle::cmdStateMachine(const TDeviceAction action) {
         #endif
         nukiCommandState = CommandState::Idle;
         lastMsgCodeReceived = Command::Empty;
+        extendDisonnectTimeout();
         return Nuki::CmdResult::Success;
       } else if (lastMsgCodeReceived == Command::ErrorReport && errorCode != 69) {
         #ifdef DEBUG_NUKI_COMMUNICATION
@@ -234,6 +244,7 @@ Nuki::CmdResult NukiBle::cmdChallStateMachine(const TDeviceAction action, const 
         log_d("************************ DATA RECEIVED ************************");
         #endif
         nukiCommandState = CommandState::Idle;
+        extendDisonnectTimeout();
         return Nuki::CmdResult::Success;
       }
       break;
