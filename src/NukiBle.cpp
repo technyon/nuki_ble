@@ -87,6 +87,8 @@ PairingResult NukiBle::pairNuki(AuthorizationIdType idType) {
     return PairingResult::Success;
   }
   PairingResult result = PairingResult::Pairing;
+  
+  if (pairingLastSeen < millis() - 2000) pairingServiceAvailable = false;
 
   if (pairingLastSeen < millis() - 2000) pairingServiceAvailable = false;
 
@@ -101,7 +103,7 @@ PairingResult NukiBle::pairNuki(AuthorizationIdType idType) {
       PairingState nukiPairingState = PairingState::InitPairing;
       do {
         nukiPairingState = pairStateMachine(nukiPairingState);
-        extendDisonnectTimeout();
+        extendDisconnectTimeout();
         delay(50);
       } while ((nukiPairingState != PairingState::Success) && (nukiPairingState != PairingState::Timeout));
 
@@ -112,6 +114,7 @@ PairingResult NukiBle::pairNuki(AuthorizationIdType idType) {
       } else {
         result = PairingResult::Timeout;
       }
+      extendDisconnectTimeout();
     }
   } else {
     #ifdef DEBUG_NUKI_CONNECT
@@ -213,7 +216,7 @@ void NukiBle::setConnectRetries(uint8_t retries) {
   connectRetries = retries;
 }
 
-void NukiBle::extendDisonnectTimeout() {
+void NukiBle::extendDisconnectTimeout() {
   lastStartTimeout = millis();
 }
 

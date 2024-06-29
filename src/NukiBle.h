@@ -291,7 +291,7 @@ class NukiBle : public BLEClientCallbacks, public BleScanner::Subscriber {
 
   protected:
     bool connectBle(const BLEAddress bleAddress);
-    void extendDisonnectTimeout();
+    void extendDisconnectTimeout();
 
     template <typename TDeviceAction>
     Nuki::CmdResult executeAction(const TDeviceAction action);
